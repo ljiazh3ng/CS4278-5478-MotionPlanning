@@ -77,7 +77,24 @@ class Planner:
         # TODO: FILL ME! implement obstacle inflation function and define self.aug_map = new_mask
 
         # you should inflate the map to get self.aug_map
+        # Change 1d array to a grid format
+        shape_y = self.world_height
+        shape_x = self.world_width
+        #self.map = np.array(self.map).reshape(shape_y, shape_x)
         self.aug_map = copy.deepcopy(self.map)
+        self.aug_map
+        inflation = self.inflation_ratio
+
+        for y in range(shape_y):
+            for x in range(shape_x):
+                if(self.map[y, x] == 999):
+                    y_min = y - inflation
+                    y_max = y + inflation
+                    x_min = y - inflation
+                    x_max = y + inflation
+                    self.aug_map[y_min: y_max, x_min: x_max] == 999
+
+
 
     def _pose_callback(self, msg):
         """get the raw pose of the robot from ROS
@@ -168,11 +185,28 @@ class Planner:
         message.angular.z = az
         return message
 
-    def generate_plan(self):
+    def checkPath(self, aug_map, cur_x, cur_y, new_x, new_y):
+        cur_x, cur_y, new_x, new_y = (np.array((cur_x, cur_y, new_x, new_y)) / self.resolution).astype(int)
+        h = self.world_height
+        w = self.world_width
+        if(new_x > w or cur_x > w or new_x < 0 or cur_x < 0 or new_y > h or cur_y > h or new_y < 0 or cur_y <0):
+            return False
+        for iter_x in range(min(cur_x, new_x), max(cur_x, new_x) + 1):
+            if(collision_checker(iter_x, cur_y):
+                    return False
+        for iter_y in range(min(cur_y, new_y), max(cur_y, new_y) + 1):
+            if(collision_checker(cur_x, iter_y):
+                    return False
+        return True
+
+        
+
+    def generate_plan_DSDA(self):
         """TODO: FILL ME! This function generates the plan for the robot, given a goal.
         You should store the list of actions into self.action_seq.
 
         In discrete case (task 1 and task 3), the robot has only 4 heading directions
+
         0: east, 1: north, 2: west, 3: south
 
         Each action could be: (1, 0) FORWARD, (0, 1) LEFT 90 degree, (0, -1) RIGHT 90 degree
@@ -181,6 +215,18 @@ class Planner:
 
         Each action could be: (v, \omega) where v is the linear velocity and \omega is the angular velocity
         """
+        r = self.resolution
+        h = np.ceil(self.world_height * r)
+        w = np.ceil(self.world_width * r)
+        empty_map = -1 * np.ones((h, w), dtype = np.int64)
+        q = []
+        #Initialize starting state
+        q.append((self.goal.pose.position.x, self.goal.pose.position.y, 0))
+        
+        actions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+        while (not q):
+
+
         self.action_seq = []
 
     def get_current_continuous_state(self):
@@ -225,8 +271,11 @@ class Planner:
         Returns:
             bool -- True for collision, False for non-collision
         """
+        if self.aug_map[x,y] == 999:
+            return True 
+        return False 
 
-        return False
+        
 
     def motion_predict(self, x, y, theta, v, w, dt=0.5, frequency=10):
         """predict the next pose of the robot given controls. Returns None if the robot collide with the wall
